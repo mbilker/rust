@@ -57,6 +57,8 @@ macro_rules! compat_fn {
                                           stringify!($symbol),
                                           fallback as usize)
             }
+
+            #[allow(unused_variables)]
             unsafe extern "system" fn fallback($($argname: $argtype),*)
                                                -> $rettype {
                 $($body);*
@@ -69,4 +71,82 @@ macro_rules! compat_fn {
             mem::transmute::<usize, F>(addr)($($argname),*)
         }
     )*)
+}
+
+macro_rules! compat_group {
+    ($gtype:ident, $gstatic:ident, $gload:ident, $module:ident: $(
+        pub fn $symbol:ident($($argname:ident: $argtype:ty),*)
+                                  -> $rettype:ty {
+            $($body:expr);*
+        }
+    )*) => (
+        struct $gtype {
+            $($symbol: crate::sync::atomic::AtomicPtr<()>),*
+        }
+        static $gstatic: $gtype = $gtype {$(
+            $symbol: crate::sync::atomic::AtomicPtr::new({
+                //type F = unsafe extern "system" fn($($argtype),*) -> $rettype;
+
+                unsafe extern "system" fn $symbol($($argname: $argtype),*)
+                                                  -> $rettype {
+                    use self::$symbol;
+                    $gload();
+                    $symbol($($argname),*)
+                }
+
+                $symbol as *mut ()
+            })
+        ),*};
+
+        fn $gload() {
+            use crate::ptr;
+            use crate::sync::atomic::{AtomicPtr, Ordering};
+
+            $(
+                #[allow(unused_variables)]
+                unsafe extern "system" fn $symbol($($argname: $argtype),*)
+                                                  -> $rettype {
+                    $($body);*
+                }
+            )*
+
+            const FALLBACKS: $gtype = $gtype {
+                $($symbol: AtomicPtr::new($symbol as *mut ())),*
+            };
+
+            fn store_funcs(funcs: &$gtype) {
+                $($gstatic.$symbol.store(funcs.$symbol.load(Ordering::SeqCst), Ordering::SeqCst);)*
+            }
+
+            let funcs: $gtype = $gtype {
+                $($symbol: AtomicPtr::new(ptr::null_mut())),*
+            };
+
+            $(
+                let addr = crate::sys::compat::lookup(stringify!($module), stringify!($symbol));
+                match addr {
+                    Some(addr) => {
+                        funcs.$symbol.store(addr as *mut (), Ordering::SeqCst);
+                    },
+                    None => {
+                        store_funcs(&FALLBACKS);
+                        return;
+                    }
+                }
+            )*
+
+            store_funcs(&funcs);
+        }
+
+        $(
+            #[inline]
+            pub unsafe fn $symbol($($argname: $argtype),*) -> $rettype {
+                use crate::mem;
+                type F = unsafe extern "system" fn($($argtype),*) -> $rettype;
+
+                let addr = $gstatic.$symbol.load(Ordering::SeqCst);
+                mem::transmute::<*mut (), F>(addr)($($argname),*)
+            }
+        )*
+    )
 }

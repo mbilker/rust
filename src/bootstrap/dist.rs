@@ -1652,7 +1652,7 @@ impl Step for Extended {
         let clippy_installer = builder.ensure(Clippy { compiler, target });
         let miri_installer = builder.ensure(Miri { compiler, target });
         let lldb_installer = builder.ensure(Lldb { target });
-        let mingw_installer = builder.ensure(Mingw { host: target });
+        //let mingw_installer = builder.ensure(Mingw { host: target });
         let analysis_installer = builder.ensure(Analysis { compiler, target });
 
         let docs_installer = builder.ensure(Docs { host: target });
@@ -1693,9 +1693,9 @@ impl Step for Extended {
         if builder.config.docs {
             tarballs.push(docs_installer);
         }
-        if target.contains("pc-windows-gnu") {
-            tarballs.push(mingw_installer.unwrap());
-        }
+        //if target.contains("pc-windows-gnu") {
+            //tarballs.push(mingw_installer.unwrap());
+        //}
         let mut input_tarballs = tarballs[0].as_os_str().to_owned();
         for tarball in &tarballs[1..] {
             input_tarballs.push(",");
