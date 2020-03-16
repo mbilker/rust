@@ -15,11 +15,12 @@
 //!    is that there are no guarantees of fairness.
 
 use crate::cell::UnsafeCell;
-use crate::mem::MaybeUninit;
+use crate::mem::{self, MaybeUninit};
 use crate::sys::c;
+use crate::sys::rwlock::{self, RWLock};
 
 pub struct Mutex {
-    srwlock: UnsafeCell<c::SRWLOCK>,
+    inner: RWLock,
 }
 
 // Windows SRW Locks are movable (while not borrowed).
@@ -29,35 +30,44 @@ unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
 
 #[inline]
-pub unsafe fn raw(m: &Mutex) -> c::PSRWLOCK {
-    m.srwlock.get()
+pub unsafe fn raw_srw(m: &Mutex) -> c::PSRWLOCK {
+    rwlock::raw_srw(&m.inner)
+}
+
+#[inline]
+pub unsafe fn raw_cs(m: &Mutex) -> c::PCRITICAL_SECTION {
+    let remutex = (*m.inner.rerwlock()).remutex();
+
+    debug_assert!(mem::size_of::<c::CRITICAL_SECTION>() <= mem::size_of_val(&(*remutex).inner));
+    &remutex.inner as *const _ as *mut _
 }
 
 impl Mutex {
     pub const fn new() -> Mutex {
-        Mutex { srwlock: UnsafeCell::new(c::SRWLOCK_INIT) }
+        Mutex { inner: RWLock::new() }
     }
+
     #[inline]
     pub unsafe fn init(&mut self) {}
 
     #[inline]
     pub unsafe fn lock(&self) {
-        c::AcquireSRWLockExclusive(raw(self));
+        self.inner.write();
     }
 
     #[inline]
     pub unsafe fn try_lock(&self) -> bool {
-        c::TryAcquireSRWLockExclusive(raw(self)) != 0
+        self.inner.try_write()
     }
 
     #[inline]
     pub unsafe fn unlock(&self) {
-        c::ReleaseSRWLockExclusive(raw(self));
+        self.inner.write_unlock();
     }
 
     #[inline]
     pub unsafe fn destroy(&self) {
-        // SRWLock does not need to be destroyed.
+        self.inner.destroy();
     }
 }
 

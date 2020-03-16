@@ -2,6 +2,7 @@ use crate::cell::UnsafeCell;
 use crate::sys::c;
 use crate::sys::mutex::{self, Mutex};
 use crate::sys::os;
+use crate::sys::rwlock::{self, Kind};
 use crate::time::Duration;
 
 pub struct Condvar {
@@ -23,17 +24,34 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn wait(&self, mutex: &Mutex) {
-        let r = c::SleepConditionVariableSRW(self.inner.get(), mutex::raw(mutex), c::INFINITE, 0);
+        let r = match rwlock::kind() {
+            Kind::SRWLock => c::SleepConditionVariableSRW(
+                self.inner.get(),
+                mutex::raw_srw(mutex),
+                c::INFINITE,
+                0,
+            ),
+            Kind::CriticalSection => {
+                c::SleepConditionVariableCS(self.inner.get(), mutex::raw_cs(mutex), c::INFINITE)
+            }
+        };
         debug_assert!(r != 0);
     }
 
     pub unsafe fn wait_timeout(&self, mutex: &Mutex, dur: Duration) -> bool {
-        let r = c::SleepConditionVariableSRW(
-            self.inner.get(),
-            mutex::raw(mutex),
-            super::dur2timeout(dur),
-            0,
-        );
+        let r = match rwlock::kind() {
+            Kind::SRWLock => c::SleepConditionVariableSRW(
+                self.inner.get(),
+                mutex::raw_srw(mutex),
+                super::dur2timeout(dur),
+                0,
+            ),
+            Kind::CriticalSection => c::SleepConditionVariableCS(
+                self.inner.get(),
+                mutex::raw_cs(mutex),
+                super::dur2timeout(dur),
+            ),
+        };
         if r == 0 {
             debug_assert_eq!(os::errno() as usize, c::ERROR_TIMEOUT as usize);
             false

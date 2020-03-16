@@ -65,6 +65,7 @@ pub type LPWSAOVERLAPPED_COMPLETION_ROUTINE = *mut c_void;
 
 pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
 pub type PLARGE_INTEGER = *mut c_longlong;
+pub type PCRITICAL_SECTION = *mut CRITICAL_SECTION;
 pub type PSRWLOCK = *mut SRWLOCK;
 
 pub type SOCKET = crate::os::windows::raw::SOCKET;
@@ -181,7 +182,6 @@ pub const INFINITE: DWORD = !0;
 pub const DUPLICATE_SAME_ACCESS: DWORD = 0x00000002;
 
 pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { ptr: ptr::null_mut() };
-pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };
 
 pub const DETACHED_PROCESS: DWORD = 0x00000008;
 pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x00000200;
@@ -955,22 +955,6 @@ extern "system" {
         lpFileInformation: LPVOID,
         dwBufferSize: DWORD,
     ) -> BOOL;
-    pub fn SleepConditionVariableSRW(
-        ConditionVariable: PCONDITION_VARIABLE,
-        SRWLock: PSRWLOCK,
-        dwMilliseconds: DWORD,
-        Flags: ULONG,
-    ) -> BOOL;
-
-    pub fn WakeConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-    pub fn WakeAllConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-
-    pub fn AcquireSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn TryAcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> BOOLEAN;
-    pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN;
 
     pub fn CompareStringOrdinal(
         lpString1: LPCWSTR,
@@ -1096,6 +1080,54 @@ extern "system" {
 // but we still use them and just provide some form of a fallback implementation.
 compat_fn! {
     "kernel32":
+
+    // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleepconditionvariablecs
+    pub fn SleepConditionVariableCS(
+        ConditionVariable: PCONDITION_VARIABLE,
+        CriticalSection: PCRITICAL_SECTION,
+        dwMilliseconds: DWORD
+    ) -> BOOL {
+        panic!("condition variables not available")
+    }
+    pub fn SleepConditionVariableSRW(
+        ConditionVariable: PCONDITION_VARIABLE,
+        SRWLock: PSRWLOCK,
+        dwMilliseconds: DWORD,
+        Flags: ULONG
+    ) -> BOOL {
+        panic!("condition variables not available")
+    }
+
+    // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-wakeconditionvariable
+    pub fn WakeConditionVariable(ConditionVariable: PCONDITION_VARIABLE) -> () {
+        panic!("condition variables not available")
+    }
+    pub fn WakeAllConditionVariable(ConditionVariable: PCONDITION_VARIABLE) -> () {
+        panic!("condition variables not available")
+    }
+
+    // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-acquiresrwlockexclusive
+    pub fn AcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn ReleaseSRWLockExclusive(SRWLock: PSRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn TryAcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> BOOLEAN {
+        panic!("rwlocks not available")
+    }
+    pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN {
+        panic!("rwlocks not available")
+    }
 
     // >= Win10 1607
     // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
