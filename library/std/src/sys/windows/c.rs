@@ -56,6 +56,7 @@ pub type LPWSAOVERLAPPED_COMPLETION_ROUTINE = *mut c_void;
 
 pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
 pub type PLARGE_INTEGER = *mut c_longlong;
+pub type PCRITICAL_SECTION = *mut CRITICAL_SECTION;
 pub type PSRWLOCK = *mut SRWLOCK;
 
 pub type SOCKET = crate::os::windows::raw::SOCKET;
@@ -214,7 +215,6 @@ pub const INFINITE: DWORD = !0;
 pub const DUPLICATE_SAME_ACCESS: DWORD = 0x00000002;
 
 pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { ptr: ptr::null_mut() };
-pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };
 
 pub const DETACHED_PROCESS: DWORD = 0x00000008;
 pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x00000200;
@@ -1062,6 +1062,11 @@ compat_fn! {
     pub fn GetSystemTimePreciseAsFileTime(lpSystemTimeAsFileTime: LPFILETIME)
                                           -> () {
         GetSystemTimeAsFileTime(lpSystemTimeAsFileTime)
+    }
+    pub fn SleepConditionVariableCS(ConditionVariable: PCONDITION_VARIABLE,
+                                    CriticalSection: PCRITICAL_SECTION,
+                                    dwMilliseconds: DWORD) -> BOOL {
+        panic!("condition variables not available")
     }
     pub fn SleepConditionVariableSRW(ConditionVariable: PCONDITION_VARIABLE,
                                      SRWLock: PSRWLOCK,
