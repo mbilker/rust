@@ -735,7 +735,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
             lpTargetFileName: LPCWSTR,
             lpSecurityAttributes: LPSECURITY_ATTRIBUTES,
         ) -> BOOL;
-        pub fn SetThreadStackGuarantee(_size: *mut c_ulong) -> BOOL;
         pub fn GetWindowsDirectoryW(lpBuffer: LPWSTR, uSize: UINT) -> UINT;
     }
 }
@@ -951,23 +950,6 @@ extern "system" {
         lpNumberOfBytesTransferred: LPDWORD,
         bWait: BOOL,
     ) -> BOOL;
-    pub fn CreateSymbolicLinkW(
-        lpSymlinkFileName: LPCWSTR,
-        lpTargetFileName: LPCWSTR,
-        dwFlags: DWORD,
-    ) -> BOOLEAN;
-    pub fn GetFinalPathNameByHandleW(
-        hFile: HANDLE,
-        lpszFilePath: LPCWSTR,
-        cchFilePath: DWORD,
-        dwFlags: DWORD,
-    ) -> DWORD;
-    pub fn SetFileInformationByHandle(
-        hFile: HANDLE,
-        FileInformationClass: FILE_INFO_BY_HANDLE_CLASS,
-        lpFileInformation: LPVOID,
-        dwBufferSize: DWORD,
-    ) -> BOOL;
 
     pub fn CompareStringOrdinal(
         lpString1: LPCWSTR,
@@ -1083,6 +1065,45 @@ compat_fn! {
     "kernel32":
 
     // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw
+    pub fn CreateSymbolicLinkW(
+        lpSymlinkFileName: LPCWSTR,
+        lpTargetFileName: LPCWSTR,
+        dwFlags: DWORD
+    ) -> BOOLEAN {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
+    }
+
+    // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew
+    pub fn GetFinalPathNameByHandleW(
+        hFile: HANDLE,
+        lpszFilePath: LPCWSTR,
+        cchFilePath: DWORD,
+        dwFlags: DWORD
+    ) -> DWORD {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
+    }
+
+    // >= Vista / Server 2003
+    // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadstackguarantee
+    #[cfg(not(target_vendor = "uwp"))]
+    pub fn SetThreadStackGuarantee(size: *mut c_ulong) -> BOOL {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); FALSE
+    }
+
+    // >= Vista / Server 2008
+    // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle
+    pub fn SetFileInformationByHandle(
+        hFile: HANDLE,
+        FileInformationClass: FILE_INFO_BY_HANDLE_CLASS,
+        lpFileInformation: LPVOID,
+        dwBufferSize: DWORD
+    ) -> BOOL {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); FALSE
+    }
+
+    // >= Vista / Server 2008
     // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleepconditionvariablecs
     pub fn SleepConditionVariableCS(
         ConditionVariable: PCONDITION_VARIABLE,
@@ -1132,15 +1153,16 @@ compat_fn! {
 
     // >= Win10 1607
     // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
-    pub fn SetThreadDescription(hThread: HANDLE,
-                                lpThreadDescription: LPCWSTR) -> HRESULT {
+    pub fn SetThreadDescription(
+        hThread: HANDLE,
+        lpThreadDescription: LPCWSTR
+    ) -> HRESULT {
         SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); E_NOTIMPL
     }
 
     // >= Win8 / Server 2012
     // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime
-    pub fn GetSystemTimePreciseAsFileTime(lpSystemTimeAsFileTime: LPFILETIME)
-                                          -> () {
+    pub fn GetSystemTimePreciseAsFileTime(lpSystemTimeAsFileTime: LPFILETIME) -> () {
         GetSystemTimeAsFileTime(lpSystemTimeAsFileTime)
     }
 
